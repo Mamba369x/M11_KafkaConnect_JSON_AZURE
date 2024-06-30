@@ -1,74 +1,76 @@
-# Setup azurerm as a state backend
-terraform {
-  backend "azurerm" {
-  }
-}
-
-# Configure the Microsoft Azure Provider
 provider "azurerm" {
   features {}
+
+  client_id       = var.CLIENT_ID
+  client_secret   = var.CLIENT_SECRET
+  tenant_id       = var.TENANT_ID
+  subscription_id = var.SUBSCRIPTION_ID
 }
 
-data "azurerm_client_config" "current" {}
-
 resource "azurerm_resource_group" "bdcc" {
-  name = "rg-${var.ENV}-${var.LOCATION}"
+  name     = "rg${var.ENV}${var.LOCATION}"
   location = var.LOCATION
-
-  lifecycle {
-    prevent_destroy = true
-  }
 
   tags = {
     region = var.BDCC_REGION
-    env = var.ENV
+    env    = var.ENV
   }
 }
 
 resource "azurerm_storage_account" "bdcc" {
-  depends_on = [
-    azurerm_resource_group.bdcc]
-
-  name = "st${var.ENV}${var.LOCATION}"
-  resource_group_name = azurerm_resource_group.bdcc.name
-  location = azurerm_resource_group.bdcc.location
-  account_tier = "Standard"
+  name                     = "st${var.ENV}${var.LOCATION}"
+  resource_group_name      = azurerm_resource_group.bdcc.name
+  location                 = azurerm_resource_group.bdcc.location
+  account_tier             = "Standard"
   account_replication_type = var.STORAGE_ACCOUNT_REPLICATION_TYPE
-  is_hns_enabled = "true"
+  is_hns_enabled           = true
+  allow_blob_public_access = true
 
   network_rules {
     default_action = "Allow"
-    ip_rules = values(var.IP_RULES)
-  }
-
-  lifecycle {
-    prevent_destroy = true
+    ip_rules       = values(var.IP_RULES)
   }
 
   tags = {
     region = var.BDCC_REGION
-    env = var.ENV
+    env    = var.ENV
   }
 }
 
-resource "azurerm_storage_data_lake_gen2_filesystem" "gen2_data" {
-  depends_on = [
-    azurerm_storage_account.bdcc]
-
-  name = "data"
-  storage_account_id = azurerm_storage_account.bdcc.id
+resource "azurerm_storage_container" "bdcc" {
+  name                  = "data${var.ENV}${var.LOCATION}"
+  storage_account_name  = azurerm_storage_account.bdcc.name
+  container_access_type = "blob"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
+resource "azurerm_storage_blob" "bdcc" {
+  for_each               = fileset(path.module, "../m11kafkaconnect/**")
+  name                   = trim(each.key, "../m11kafkaconnect/")
+  storage_account_name   = azurerm_storage_account.bdcc.name
+  storage_container_name = azurerm_storage_container.bdcc.name
+  type                   = "Block"
+  source                 = each.key
+}
+
+resource "azurerm_container_registry" "bdcc" {
+  name                = "acr${var.ENV}${var.LOCATION}"
+  resource_group_name = azurerm_resource_group.bdcc.name
+  location            = azurerm_resource_group.bdcc.location
+  sku                 = "Standard"
+  admin_enabled       = true
+
+  tags = {
+    region = var.BDCC_REGION
+    env    = var.ENV
+  }
+}
 
 resource "azurerm_kubernetes_cluster" "bdcc" {
-  depends_on = [
-    azurerm_resource_group.bdcc]
-
-  name                = "aks-${var.ENV}-${var.LOCATION}"
+  name                = "aks${var.ENV}${var.LOCATION}"
   location            = azurerm_resource_group.bdcc.location
   resource_group_name = azurerm_resource_group.bdcc.name
   dns_prefix          = "bdcc${var.ENV}"
@@ -79,21 +81,53 @@ resource "azurerm_kubernetes_cluster" "bdcc" {
     vm_size    = "Standard_D2_v2"
   }
 
-  identity {
-    type = "SystemAssigned"
+  service_principal {
+    client_id     = var.CLIENT_ID
+    client_secret = var.CLIENT_SECRET
   }
 
   tags = {
     region = var.BDCC_REGION
-    env = var.ENV
+    env    = var.ENV
   }
 }
 
-output "client_certificate" {
-  value = azurerm_kubernetes_cluster.bdcc.kube_config.0.client_certificate
+data "azurerm_kubernetes_cluster" "bdcc" {
+  name                = azurerm_kubernetes_cluster.bdcc.name
+  resource_group_name = azurerm_kubernetes_cluster.bdcc.resource_group_name
 }
 
-output "kube_config" {
+output "storage_account_name" {
+  value     = azurerm_storage_account.bdcc.name
   sensitive = true
-  value = azurerm_kubernetes_cluster.bdcc.kube_config_raw
+}
+
+output "storage_container_name" {
+  value     = azurerm_storage_container.bdcc.name
+  sensitive = true
+}
+
+output "resource_group_name" {
+  value     = azurerm_resource_group.bdcc.name
+  sensitive = true
+}
+
+output "acr_login_server" {
+  value     = azurerm_container_registry.bdcc.login_server
+  sensitive = true
+}
+
+output "acr_name" {
+  value     = azurerm_container_registry.bdcc.name
+  sensitive = true
+}
+
+output "kubernetes_cluster_name" {
+  value     = azurerm_kubernetes_cluster.bdcc.name
+  sensitive = true
+}
+
+output "kubernetes_cluster_host" {
+  value     = data.azurerm_kubernetes_cluster.bdcc.kube_config.0.host
+  sensitive = true
 }

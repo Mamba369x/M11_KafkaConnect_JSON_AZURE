@@ -1,4 +1,53 @@
-# Kafka connect in Kubernetes
+# Kafka Connect
+
+Link to project repo - https://github.com/Mamba369x/M11_KafkaConnect_JSON_AZURE
+
+
+## Prerequisites
+
+- Azure CLI
+- Terraform
+- Python 3
+- wget (for Linux/Mac) or PowerShell (for Windows)
+- Make
+
+## Environment Variables
+
+Before running the Makefile targets, ensure that the following environment variables are set:
+
+- `TF_VAR_SUBSCRIPTION_ID`: Your Azure subscription ID
+
+### Setting Environment Variables
+
+#### On Mac and Linux
+
+To set the environment variables on Mac or Linux, you can use the `export` command in the terminal:
+
+```bash
+export TF_VAR_SUBSCRIPTION_ID=<your_subscription_id>
+```
+
+#### On Windows
+
+To set the environment variables on Windows, you can use the `set` command in the Command Prompt or `setx` command for permanent environment variables.
+
+For the current session:
+
+```cmd
+set TF_VAR_SUBSCRIPTION_ID=<your_subscription_id>
+```
+
+## Example Usage
+
+To run the complete setup and execute the Spark job, use the following commands:
+
+```bash
+make start
+```
+
+* Step 1: Unzipping and Azure Login
+The first step involves unzipping provided data and logging into Azure.
+![Step 1:](src/azure_login.png)
 
 ## Install Confluent Hub Client
 
