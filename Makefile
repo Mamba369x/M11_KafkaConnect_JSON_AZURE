@@ -67,6 +67,7 @@ run:
 
 destroy:
 	cd terraform && \
+	source env.sh && \
 	terraform destroy -auto-approve && \
 	cd .. && \
 	$(CLEAN)
