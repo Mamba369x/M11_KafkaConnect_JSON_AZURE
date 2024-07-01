@@ -1,4 +1,4 @@
-# Ensure TF_VAR_SUBSCRIPTION_ID and OPENCAGEAPIKEY are set before running the target
+# Ensure TF_VAR_SUBSCRIPTION_ID is set before running the target
 ifndef TF_VAR_SUBSCRIPTION_ID
 $(error TF_VAR_SUBSCRIPTION_ID is undefined. Please set TF_VAR_SUBSCRIPTION_ID to your Azure subscription ID.)
 endif
