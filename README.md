@@ -8,8 +8,9 @@ Link to project repo - https://github.com/Mamba369x/M11_KafkaConnect_JSON_AZURE
 - Azure CLI
 - Terraform
 - Python 3
-- wget (for Linux/Mac) or PowerShell (for Windows)
+- wget
 - Make
+- Jq
 
 ## Environment Variables
 
@@ -27,105 +28,52 @@ To set the environment variables on Mac or Linux, you can use the `export` comma
 export TF_VAR_SUBSCRIPTION_ID=<your_subscription_id>
 ```
 
-#### On Windows
-
-To set the environment variables on Windows, you can use the `set` command in the Command Prompt or `setx` command for permanent environment variables.
-
-For the current session:
-
-```cmd
-set TF_VAR_SUBSCRIPTION_ID=<your_subscription_id>
-```
-
 ## Example Usage
 
-To run the complete setup and execute the Spark job, use the following commands:
+* Step 1: The first step involves unzipping provided data and uploading it into terraform infra.
 
 ```bash
 make start
 ```
 
-* Step 1: Unzipping and Azure Login
-The first step involves unzipping provided data and logging into Azure.
-![Step 1:](src/azure_login.png)
+![Step 1:](screenshots/terraform_created.png)
 
-## Install Confluent Hub Client
+* Step 2: Create and push azure connector docker image
 
-You can find the installation manual [here](https://docs.confluent.io/home/connect/confluent-hub/client.html)
+```bash
+make build
+```
 
-## Create a custom docker image
+![Step 2:](screenshots/build_finished.png)
 
-For running the azure connector, you can create your own docker image. Create your azure connector image and build it.
+* Step 3: Launch Confluent for Kubernetes
 
-## Launch Confluent for Kubernetes
+```bash
+make conf
+```
 
-### Create a namespace
+![Step 3:](screenshots/configuration_completed.png)
 
-- Create the namespace to use:
+* Step 4: View Control Center
 
-  ```cmd
-  kubectl create namespace confluent
-  ```
+```bash
+make run
+```
 
-- Set this namespace to default for your Kubernetes context:
-
-  ```cmd
-  kubectl config set-context --current --namespace confluent
-  ```
-
-### Install Confluent for Kubernetes
-
-- Add the Confluent for Kubernetes Helm repository:
-
-  ```cmd
-  helm repo add confluentinc https://packages.confluent.io/helm
-  helm repo update
-  ```
-
-- Install Confluent for Kubernetes:
-
-  ```cmd
-  helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes
-  ```
-
-## Create your own connector's image
-
-- Create your own connector's docker image using provided Dockerfile and use it in confluent-platform.yaml
-
-### Install Confluent Platform
-
-- Install all Confluent Platform components:
-
-  ```cmd
-  kubectl apply -f ./confluent-platform.yaml
-  ```
-
-- Install a sample producer app and topic:
-
-  ```cmd
-  kubectl apply -f ./producer-app-data.yaml
-  ```
-
-- Check that everything is deployed:
-
-  ```cmd
-  kubectl get pods -o wide 
-  ```
-
-### View Control Center
-
-- Set up port forwarding to Control Center web UI from local machine:
-
-  ```cmd
-  kubectl port-forward controlcenter-0 9021:9021
-  ```
+![Step 4:](screenshots/kafka_running.png)
 
 - Browse to Control Center: [http://localhost:9021](http://localhost:9021)
 
-## Create a kafka topic
+![Step 4:](screenshots/control_center.png)
 
-- The topic should have at least 3 partitions because the azure blob storage has 3 partitions. Name the new topic: "expedia".
+* Step 5: Create a kafka topic
 
-## Prepare the azure connector configuration
+![Step 5:](screenshots/kafka_running.png)
 
-## Upload the connector file through the API
+* Step 6:Prepare the azure connector configuration
+
+![Step 6:](screenshots/connector_config.png)
+
+* Step 7: Upload the connector file through the API and observe messages flow
+
+![Step 7:](screenshots/messages_flow.png)

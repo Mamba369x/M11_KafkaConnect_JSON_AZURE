@@ -3,21 +3,8 @@ ifndef TF_VAR_SUBSCRIPTION_ID
 $(error TF_VAR_SUBSCRIPTION_ID is undefined. Please set TF_VAR_SUBSCRIPTION_ID to your Azure subscription ID.)
 endif
 
-# Determine OS type
-OS := $(shell uname -s)
-
-# Define appropriate commands based on the operating system
-ifeq ($(OS), Windows_NT)
-    CHOCO_CHECK = where choco >NUL 2>&1 || (echo "choco not found, installing..." && @powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1'))")
-    JQ_CHECK = where jq >NUL 2>&1 || (echo "jq not found, installing..." && choco install jq -y)
-    SET_ENV = set
-    CLEAN = powershell -Command "Remove-Item -Recurse -Force terraform\.terraform, terraform\.terraform.lock.hcl, terraform\terraform.tfstate, terraform\terraform.tfstate.backup, terraform\env.sh" 
-else
-    JQ_CHECK = command -v jq >/dev/null 2>&1 || { echo >&2 "jq not found, installing..."; brew install jq; }
-    SET_ENV = export
-    CLEAN = rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate terraform/terraform.tfstate.backup terraform/env.sh
-endif
-
+SET_ENV = export
+CLEAN = rm -rf terraform/.terraform terraform/.terraform.lock.hcl terraform/terraform.tfstate terraform/terraform.tfstate.backup terraform/env.sh
 AZURE_LOGIN = az login
 AZURE_SP_CREATE = az ad sp create-for-rbac --name "homework" --role "Owner" --scopes "/subscriptions/$$TF_VAR_SUBSCRIPTION_ID"
 
@@ -52,6 +39,14 @@ start:
 	echo "$(SET_ENV) STORAGE_ACCOUNT_NAME=$$STORAGE_ACCOUNT_NAME" >> env.sh  && \
 	echo "$(SET_ENV) STORAGE_CONTAINER_NAME=$$STORAGE_CONTAINER_NAME" >> env.sh
 
+build:
+	cd terraform && \
+	source env.sh && \
+	cd ../connectors && \
+	az login --service-principal --username $$TF_VAR_CLIENT_ID --password $$TF_VAR_CLIENT_SECRET --tenant $$TF_VAR_TENANT_ID && \
+	az acr build --registry $$ACR_NAME --image azure-connector:latest -f Dockerfile . && \
+	az aks update --name $$KUBERNETES_CLUSTER_NAME --resource-group $$RESOURCE_GROUP_NAME --attach-acr $$ACR_NAME
+
 conf:
 	cd terraform && \
 	source env.sh && \
@@ -64,17 +59,11 @@ conf:
 	helm repo update && \
 	helm upgrade --install confluent-operator confluentinc/confluent-for-kubernetes && \
 	kubectl apply -f confluent-platform.yaml && \
-    kubectl apply -f producer-app-data.yaml && \
+    kubectl apply -f producer-app-data.yaml
+
+run:
 	kubectl get pods -o wide  && \
     kubectl port-forward controlcenter-0 9021:9021
-
-build:
-	cd terraform && \
-	source env.sh && \
-	cd ../connectors && \
-	az login --service-principal --username $$TF_VAR_CLIENT_ID --password $$TF_VAR_CLIENT_SECRET --tenant $$TF_VAR_TENANT_ID && \
-	az acr build --registry $$ACR_NAME --image azure-connector:latest -f Dockerfile . && \
-	az aks update --name $$KUBERNETES_CLUSTER_NAME --resource-group $$RESOURCE_GROUP_NAME --attach-acr $$ACR_NAME
 
 destroy:
 	cd terraform && \

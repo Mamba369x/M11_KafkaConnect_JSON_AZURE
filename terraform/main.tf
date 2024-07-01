@@ -48,8 +48,8 @@ resource "azurerm_storage_container" "bdcc" {
 }
 
 resource "azurerm_storage_blob" "bdcc" {
-  for_each               = fileset(path.module, "../m11kafkaconnect/**")
-  name                   = trim(each.key, "../m11kafkaconnect/")
+  for_each               = fileset(path.module, "../m11kafkaconnect/topics/expedia/**")
+  name                   = "${replace(each.key, "../m11kafkaconnect/", "")}"
   storage_account_name   = azurerm_storage_account.bdcc.name
   storage_container_name = azurerm_storage_container.bdcc.name
   type                   = "Block"
@@ -77,7 +77,7 @@ resource "azurerm_kubernetes_cluster" "bdcc" {
 
   default_node_pool {
     name       = "default"
-    node_count = 1
+    node_count = 3
     vm_size    = "Standard_D2_v2"
   }
 
