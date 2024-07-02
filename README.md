@@ -68,7 +68,7 @@ make run
 
 * Step 5: Create a kafka topic
 
-![Step 5:](screenshots/kafka_running.png)
+![Step 5:](screenshots/create_topic.png)
 
 * Step 6:Prepare the azure connector configuration
 
