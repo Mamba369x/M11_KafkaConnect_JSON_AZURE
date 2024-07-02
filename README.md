@@ -70,7 +70,7 @@ make run
 
 ![Step 5:](screenshots/create_topic.png)
 
-* Step 6:Prepare the azure connector configuration
+* Step 6: Prepare the azure connector configuration
 
 ![Step 6:](screenshots/connector_config.png)
 
